@@ -29,8 +29,13 @@ impl StepTrait for Welcome {
     fn render(&self, _state: &mut AppState, area: Rect, buf: &mut Buffer) {
         let inner = Card::new(WEL_C_NAME).render(area, buf);
 
-        let [logo_slot, footer] =
-            Layout::vertical([Constraint::Min(WEL_C_M), Constraint::Length(WEL_C_L)]).areas(inner);
+        let [logo_slot, footer1, footer2, footer3] = Layout::vertical([
+            Constraint::Min(WEL_C_M),
+            Constraint::Length(WEL_C_L),
+            Constraint::Length(WEL_C_L),
+            Constraint::Length(WEL_C_L),
+        ])
+        .areas(inner);
 
         let logo = WEL_LOGO_PATH.into_text().unwrap_or_default();
         let logo_width = logo.width() as u16;
@@ -44,6 +49,12 @@ impl StepTrait for Welcome {
             .areas(centered);
 
         Paragraph::new(logo).render(centered, buf);
-        Text::new().content(WEL_T_FOOTER).render(footer, buf);
+
+        let footers = [footer1, footer2, footer3];
+        for (i, text) in WEL_T_FOOTER.split('\n').enumerate() {
+            if let Some(area) = footers.get(i) {
+                Text::new().content(text).render(*area, buf);
+            }
+        }
     }
 }

@@ -84,5 +84,6 @@ pub const USER_T_FOOTER: &str = "The usernam can have any alphanumeric and digti
 pub const WEL_C_NAME: &str = "Welcome";
 pub const WEL_C_M: u16 = 10;
 pub const WEL_C_L: u16 = 1;
-pub const WEL_T_FOOTER: &str = "Enter confirm · Esc quit\n↑↓ scroll · Enter select\nEnter confirm · Shift-Tab back\nMade by WookiesRpeople2";
+pub const WEL_T_FOOTER: &str =
+    "Use Esc in order to quit\n Use Shift-Tab to go back one\nMade by WookiesRpeople2";
 pub const WEL_LOGO_PATH: &str = include_str!("../assets/logo.txt");
