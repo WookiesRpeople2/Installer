@@ -13,6 +13,7 @@ pub mod swap;
 pub mod timezone;
 pub mod username;
 pub mod welcome;
+pub mod wifi;
 
 pub enum Transition {
     None,

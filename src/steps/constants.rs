@@ -87,3 +87,12 @@ pub const WEL_C_L: u16 = 1;
 pub const WEL_T_FOOTER: &str =
     "Use Esc in order to quit\n Use Shift-Tab to go back one\nMade by WookiesRpeople2";
 pub const WEL_LOGO_PATH: &str = include_str!("../assets/logo.txt");
+
+pub const WIFI_C_NAME: &str = "Wi-Fi";
+pub const WIFI_F_H: u16 = 12;
+pub const WIFI_F_C: usize = 1;
+pub const WIFI_SKIP: &str = "Skip (Ethernet)";
+pub const WIFI_T_INTRO_NET: &str = "Select a Wi-Fi network";
+pub const WIFI_T_FOOTER_NET: &str = "Skip if you are on Ethernet";
+pub const WIFI_T_INTRO_PASS: &str = "Enter password for";
+pub const WIFI_T_FOOTER_PASS: &str = "Enter connect · Shift-Tab back to list";
