@@ -8,6 +8,7 @@ use crate::components::prompt::Prompt;
 use crate::components::scroll_list::ScrollList;
 use crate::steps::boot_manager::BootManger;
 use crate::steps::confirm::Confirm;
+use crate::steps::constants::WIFI_SKIP;
 use crate::steps::disk::Disk;
 use crate::steps::done::Done;
 use crate::steps::hostname::Hostname;
@@ -19,13 +20,16 @@ use crate::steps::swap::Swap;
 use crate::steps::timezone::Timezone;
 use crate::steps::username::Username;
 use crate::steps::welcome::Welcome;
+use crate::steps::wifi::{Wifi, WifiPhase};
 use crate::steps::{StepTrait, Transition};
 use crate::utils::cmd::{get_disks, reboot};
 use crate::utils::install::InstallEvent;
+use crate::utils::wifi::{wifi_device, wifi_networks, wifi_scan};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepId {
     Welcome,
+    Wifi,
     Username,
     Hostname,
     Password,
@@ -44,11 +48,13 @@ pub enum StepId {
 pub struct State {
     pub disk: PathBuf,
     pub swap: PathBuf,
+    pub wifi_ssid: String,
 
     pub username: Prompt,
     pub hostname: Prompt,
     pub user_password: Prompt,
     pub root_password: Prompt,
+    pub wifi_password: Prompt,
 
     pub timezone: ScrollList,
     pub locale: ScrollList,
@@ -56,6 +62,7 @@ pub struct State {
     pub disks: ScrollList,
     pub swaps: ScrollList,
     pub boot_managers: ScrollList,
+    pub wifi_networks: ScrollList,
 }
 
 pub struct AppState {
@@ -64,6 +71,8 @@ pub struct AppState {
     pub install_label: String,
     pub install_error: Option<String>,
     pub install_rx: Option<Receiver<InstallEvent>>,
+    pub wifi_phase: WifiPhase,
+    pub wifi_error: Option<String>,
 
     step: StepId,
     exit: bool,
@@ -74,6 +83,7 @@ impl Default for AppState {
         let state = State {
             disk: PathBuf::new(),
             swap: PathBuf::new(),
+            wifi_ssid: String::new(),
             username: Prompt::new("Username", "type your name…").max_len(64),
             hostname: Prompt::new("Hostname", "modular").max_len(64),
             user_password: Prompt::new("User Password", "Set the user password")
@@ -82,6 +92,9 @@ impl Default for AppState {
             root_password: Prompt::new("Root Password", "Set the root password")
                 .mask(true)
                 .max_len(64),
+            wifi_password: Prompt::new("Wi-Fi Password", "network password…")
+                .mask(true)
+                .max_len(128),
             timezone: ScrollList::new(
                 "Timezone",
                 vec![
@@ -137,6 +150,14 @@ impl Default for AppState {
                     .collect::<Vec<_>>(),
             ),
             boot_managers: ScrollList::new("Boot Managers", vec!["efi".into(), "grub".into()]),
+            wifi_networks: ScrollList::new("WI-FI", {
+                let mut items = vec![WIFI_SKIP.to_string()];
+                if let Ok(dev) = wifi_device() {
+                    let _ = wifi_scan(&dev);
+                    items.extend(wifi_networks(&dev));
+                }
+                items
+            }),
         };
 
         Self {
@@ -145,6 +166,8 @@ impl Default for AppState {
             install_label: "Starting…".into(),
             install_error: None,
             install_rx: None,
+            wifi_phase: WifiPhase::Networks,
+            wifi_error: None,
 
             step: StepId::Welcome,
             exit: false,
@@ -233,7 +256,8 @@ impl AppState {
 impl StepId {
     fn next(self) -> Self {
         match self {
-            Self::Welcome => Self::Username,
+            Self::Welcome => Self::Wifi,
+            Self::Wifi => Self::Username,
             Self::Username => Self::Hostname,
             Self::Hostname => Self::Password,
             Self::Password => Self::Timezone,
@@ -252,7 +276,8 @@ impl StepId {
     fn back(self) -> Self {
         match self {
             Self::Welcome => Self::Welcome,
-            Self::Username => Self::Welcome,
+            Self::Wifi => Self::Welcome,
+            Self::Username => Self::Wifi,
             Self::Hostname => Self::Username,
             Self::Password => Self::Hostname,
             Self::Timezone => Self::Password,
@@ -270,6 +295,7 @@ impl StepId {
     fn widget(&self) -> &'static dyn StepTrait {
         match self {
             StepId::Welcome => &Welcome,
+            StepId::Wifi => &Wifi,
             StepId::Username => &Username,
             StepId::Hostname => &Hostname,
             StepId::Password => &Password,
