@@ -36,7 +36,12 @@ pub fn handle_on_key_menu_prompt(prompts: &mut [&mut Prompt], key: KeyEvent) -> 
             cycle_focus(prompts, false);
             Transition::None
         }
-        KeyCode::Enter if !all_prompts_filled(prompts) => Transition::None,
+        KeyCode::Enter if !all_prompts_filled(prompts) => {
+            for p in prompts.iter_mut() {
+                p.set_invalid(p.is_empty());
+            }
+            Transition::None
+        }
         _ => match prompts.iter_mut().find(|p| p.is_focused()) {
             Some(active) => prompt(active, key),
             _ => Transition::None,
@@ -71,5 +76,8 @@ fn cycle_focus(prompts: &mut [&mut Prompt], forward: bool) {
 
     for (i, p) in prompts.iter_mut().enumerate() {
         p.set_focused(i == next);
+        if i == next {
+            p.clear_invalid();
+        }
     }
 }

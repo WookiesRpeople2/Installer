@@ -9,6 +9,7 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph, Widget},
 };
 
+use crate::components::constants::{ERROR, PROMPT_DEFAULT_INVALID};
 use crate::components::{
     InputComponent,
     constants::{
@@ -25,6 +26,7 @@ pub struct Prompt {
     max_len: usize,
     mask: bool,
     focused: bool,
+    invalid: bool,
     filter: fn(char) -> bool,
 }
 
@@ -37,6 +39,7 @@ impl Prompt {
             max_len: PROMPT_DEFAULT_MAX_LEN,
             mask: PROMPT_DEFAULT_MASK,
             focused: PROMPT_DEFAULT_FOCUSED,
+            invalid: PROMPT_DEFAULT_INVALID,
             filter: |c| c.is_ascii_alphanumeric() || c == '-' || c == '_',
         }
     }
@@ -80,6 +83,13 @@ impl Prompt {
         self.focused = focused;
     }
 
+    pub fn set_invalid(&mut self, invalid: bool) {
+        self.invalid = invalid;
+    }
+    pub fn clear_invalid(&mut self) {
+        self.invalid = false;
+    }
+
     fn preferred_width(&self) -> u16 {
         let content = self
             .max_len
@@ -120,7 +130,13 @@ impl Widget for &Prompt {
             if self.focused { PROMPT_CURSOR } else { " " },
             Style::default().fg(ACCENT),
         );
-        let border_style = Style::default().fg(if self.focused { ACCENT } else { MUTED });
+        let border_style = Style::default().fg(if self.invalid {
+            ERROR
+        } else if self.focused {
+            ACCENT
+        } else {
+            MUTED
+        });
 
         Paragraph::new(self.label.as_str())
             .fg(MUTED)
