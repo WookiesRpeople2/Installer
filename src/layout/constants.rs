@@ -1,0 +1,1 @@
+pub const VERTICAL_DEFAULT_FIELD_HIGHT: u16 = 4;

@@ -9,7 +9,10 @@ use ratatui::{
 use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{WEL_C_L, WEL_C_M, WEL_C_NAME, WEL_LOGO_PATH, WEL_T_FOOTER},
+    },
 };
 
 pub struct Welcome;
@@ -24,14 +27,12 @@ impl StepTrait for Welcome {
     }
 
     fn render(&self, _state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Installer").render(area, buf);
+        let inner = Card::new(WEL_C_NAME).render(area, buf);
 
         let [logo_slot, footer] =
-            Layout::vertical([Constraint::Min(10), Constraint::Length(1)]).areas(inner);
+            Layout::vertical([Constraint::Min(WEL_C_M), Constraint::Length(WEL_C_L)]).areas(inner);
 
-        let logo = include_str!("../assets/logo.txt")
-            .into_text()
-            .unwrap_or_default();
+        let logo = WEL_LOGO_PATH.into_text().unwrap_or_default();
         let logo_width = logo.width() as u16;
         let logo_height = logo.height() as u16;
 
@@ -43,9 +44,6 @@ impl StepTrait for Welcome {
             .areas(centered);
 
         Paragraph::new(logo).render(centered, buf);
-
-        Text::new()
-            .content("Made by WookiesRpeople2".to_string())
-            .render(footer, buf);
+        Text::new().content(WEL_T_FOOTER).render(footer, buf);
     }
 }

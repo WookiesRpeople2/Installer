@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::components::constants;
+use crate::components::constants::{BORDER, FG, SUMMARY_W_SAT};
 
 pub struct Summary<'a> {
     lines: Vec<&'a str>,
@@ -25,7 +25,7 @@ impl<'a> Summary<'a> {
             .max()
             .unwrap_or(0);
 
-        u16::try_from(longest.saturating_add(4)).unwrap_or(u16::MAX) // borders + a little padding
+        u16::try_from(longest.saturating_add(SUMMARY_W_SAT)).unwrap_or(u16::MAX)
     }
 }
 
@@ -39,9 +39,9 @@ impl Widget for Summary<'_> {
             .block(
                 Block::bordered()
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(constants::BORDER)),
+                    .border_style(Style::default().fg(BORDER)),
             )
-            .fg(constants::FG)
+            .fg(FG)
             .left_aligned()
             .render(column, buf);
     }

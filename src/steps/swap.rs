@@ -5,7 +5,12 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{
+            SCROLL_LIST_CARD_FOOTER, SWAP_C_NAME, SWAP_F_C, SWAP_F_H, SWAP_T_FOOTER, SWAP_T_INTRO,
+        },
+    },
     utils::key::handle_on_key_menu,
 };
 use std::path::PathBuf;
@@ -25,17 +30,15 @@ impl StepTrait for Swap {
     }
 
     fn render(&self, app_state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Swap Partition")
-            .footer("WARNING: selected disk will be erased")
+        let inner = Card::new(SWAP_C_NAME)
+            .footer(SCROLL_LIST_CARD_FOOTER)
             .render(area, buf);
-        let areas = Vertical::new().field_height(12).split(inner, 2);
+        let areas = Vertical::new()
+            .field_height(SWAP_F_H)
+            .split(inner, SWAP_F_C);
 
-        Text::new()
-            .content("Select install target".into())
-            .render(areas.intro, buf);
+        Text::new().content(SWAP_T_INTRO).render(areas.intro, buf);
         app_state.state.swaps.render(areas.fields[0], buf);
-        Text::new()
-            .content("Select None if you do not want to use the swap partition".into())
-            .render(areas.footer, buf);
+        Text::new().content(SWAP_T_FOOTER).render(areas.footer, buf);
     }
 }

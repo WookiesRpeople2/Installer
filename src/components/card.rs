@@ -6,7 +6,13 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Padding, Widget},
 };
 
-use crate::{components::background::Background, components::constants};
+use crate::components::{
+    background::Background,
+    constants::{
+        self, CARD_DEFAULT_BRAND, CARD_DEFAULT_FOOTER, CARD_MARGIN_BOTH_DIRECTIONS, CARD_MARGIN_X,
+        CARD_MARGIN_Y, CARD_MAX_H, CARD_MAX_W,
+    },
+};
 
 pub struct Card {
     brand: String,
@@ -17,9 +23,9 @@ pub struct Card {
 impl Card {
     pub fn new(section: impl Into<String>) -> Self {
         Self {
-            brand: "Modular".to_string(),
+            brand: CARD_DEFAULT_BRAND.to_string(),
             section: section.into(),
-            footer: "Enter confirm · Esc quit".to_string(),
+            footer: CARD_DEFAULT_FOOTER.to_string(),
         }
     }
 
@@ -36,10 +42,14 @@ impl Card {
     pub fn render(&self, area: Rect, buf: &mut Buffer) -> Rect {
         Background.render(area, buf);
 
-        let margin_x = 4;
-        let margin_y = 2;
-        let width = area.width.saturating_sub(margin_x * 2).max(40);
-        let height = area.height.saturating_sub(margin_y * 2).max(12);
+        let width = area
+            .width
+            .saturating_sub(CARD_MARGIN_X * CARD_MARGIN_BOTH_DIRECTIONS)
+            .max(CARD_MAX_W);
+        let height = area
+            .height
+            .saturating_sub(CARD_MARGIN_Y * CARD_MARGIN_BOTH_DIRECTIONS)
+            .max(CARD_MAX_H);
         let card_area = centered_rect(area, width, height);
         Clear.render(card_area, buf);
 

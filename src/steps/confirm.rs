@@ -2,7 +2,14 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, summary::Summary, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{
+            CONF_C_NAME, CONF_F_C, CONF_F_H, CONF_T_BOOT, CONF_T_DISK, CONF_T_FOOTER, CONF_T_HOST,
+            CONF_T_INTRO, CONF_T_KEY, CONF_T_LOCALE, CONF_T_SWAP, CONF_T_TZ, CONF_T_USER,
+            PROMPT_CARD_FOOTER,
+        },
+    },
     utils::install::{InstallEvent, install},
 };
 use crossterm::event::{KeyCode, KeyEvent};
@@ -43,47 +50,63 @@ impl StepTrait for Confirm {
     }
 
     fn render(&self, app_state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Confirm").render(area, buf);
-        let areas = Vertical::new().field_height(12).split(inner, 1);
+        let inner = Card::new(CONF_C_NAME)
+            .footer(PROMPT_CARD_FOOTER)
+            .render(area, buf);
+        let areas = Vertical::new()
+            .field_height(CONF_F_H)
+            .split(inner, CONF_F_C);
 
-        Text::new()
-            .content("Review your choices".into())
-            .render(areas.intro, buf);
+        Text::new().content(CONF_T_INTRO).render(areas.intro, buf);
 
-        let user = format!("User:     {}", app_state.state.username.value());
-        let host = format!("Host:     {}", app_state.state.hostname.value());
-        let boot_manager = format!(
-            "Boot:     {}",
-            app_state.state.boot_managers.selected().unwrap_or("-")
-        );
-        let disk = format!("Disk:     {}", app_state.state.disk.display());
-        let swap = format!("Swap:     {}", app_state.state.swap.display());
-        let timezone = format!(
-            "Timezone: {}",
-            app_state.state.timezone.selected().unwrap_or("-")
-        );
-        let locale = format!(
-            "Locale:   {}",
-            app_state.state.locale.selected().unwrap_or("-")
-        );
-        let keymap = format!(
-            "Keymap:   {}",
-            app_state.state.keymap.selected().unwrap_or("-")
-        );
-        let summary = Summary::new(vec![
-            &user,
-            &host,
-            &boot_manager,
-            &disk,
-            &swap,
-            &timezone,
-            &locale,
-            &keymap,
-        ]);
+        let pairs: Vec<(&str, String)> = vec![
+            (CONF_T_USER, app_state.state.username.value().to_string()),
+            (CONF_T_HOST, app_state.state.hostname.value().to_string()),
+            (
+                CONF_T_BOOT,
+                app_state
+                    .state
+                    .boot_managers
+                    .selected()
+                    .unwrap_or("-")
+                    .to_string(),
+            ),
+            (CONF_T_DISK, app_state.state.disk.display().to_string()),
+            (CONF_T_SWAP, app_state.state.swap.display().to_string()),
+            (
+                CONF_T_TZ,
+                app_state
+                    .state
+                    .timezone
+                    .selected()
+                    .unwrap_or("-")
+                    .to_string(),
+            ),
+            (
+                CONF_T_LOCALE,
+                app_state.state.locale.selected().unwrap_or("-").to_string(),
+            ),
+            (
+                CONF_T_KEY,
+                app_state.state.keymap.selected().unwrap_or("-").to_string(),
+            ),
+        ];
+
+        let label_width = pairs
+            .iter()
+            .map(|(l, _)| l.chars().count())
+            .max()
+            .unwrap_or(0);
+
+        let lines: Vec<String> = pairs
+            .iter()
+            .map(|(label, value)| format!("{:<width$}   {}", label, value, width = label_width))
+            .collect();
+
+        let line_refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        let summary = Summary::new(line_refs);
         summary.render(areas.fields[0], buf);
 
-        Text::new()
-            .content("Enter to install · Shift-Tab back".into())
-            .render(areas.footer, buf);
+        Text::new().content(CONF_T_FOOTER).render(areas.footer, buf);
     }
 }

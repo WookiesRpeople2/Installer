@@ -1,5 +1,6 @@
 pub mod boot_manager;
 pub mod confirm;
+mod constants;
 pub mod disk;
 pub mod done;
 pub mod hostname;

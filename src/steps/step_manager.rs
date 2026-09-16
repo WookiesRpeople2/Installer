@@ -20,7 +20,7 @@ use crate::steps::timezone::Timezone;
 use crate::steps::username::Username;
 use crate::steps::welcome::Welcome;
 use crate::steps::{StepTrait, Transition};
-use crate::utils::cmd::get_disks;
+use crate::utils::cmd::{get_disks, reboot};
 use crate::utils::install::InstallEvent;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -195,7 +195,10 @@ impl AppState {
     fn apply(&mut self, t: Transition) {
         match t {
             Transition::None => {}
-            Transition::Quit => self.exit = true,
+            Transition::Quit => {
+                let _ = reboot();
+                self.exit = true
+            }
             Transition::Next => self.step = self.step.next(),
             Transition::Back => self.step = self.step.back(),
         }
