@@ -9,7 +9,13 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph, Widget},
 };
 
-use crate::components::{InputComponent, constants};
+use crate::components::{
+    InputComponent,
+    constants::{
+        ACCENT, FAINT, FG, MUTED, PROMPT_CURSOR, PROMPT_DEFAULT_FOCUSED, PROMPT_DEFAULT_MASK,
+        PROMPT_DEFAULT_MAX_LEN, PROMPT_SATURATING, PROPMT_PADDING,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub struct Prompt {
@@ -28,9 +34,9 @@ impl Prompt {
             label: label.into(),
             placeholder: placeholder.into(),
             value: String::new(),
-            max_len: 32,
-            mask: false,
-            focused: false,
+            max_len: PROMPT_DEFAULT_MAX_LEN,
+            mask: PROMPT_DEFAULT_MASK,
+            focused: PROMPT_DEFAULT_FOCUSED,
             filter: |c| c.is_ascii_alphanumeric() || c == '-' || c == '_',
         }
     }
@@ -80,7 +86,7 @@ impl Prompt {
             .max(self.placeholder.chars().count())
             .max(self.label.chars().count());
 
-        u16::try_from(content.saturating_add(6)).unwrap_or(u16::MAX) // borders + padding + cursor
+        u16::try_from(content.saturating_add(PROMPT_SATURATING)).unwrap_or(u16::MAX) // borders + padding + cursor
     }
 }
 
@@ -111,17 +117,13 @@ impl Widget for &Prompt {
 
         let chunks = Layout::vertical([Constraint::Length(1), Constraint::Length(3)]).split(column);
         let cursor = Span::styled(
-            if self.focused { "▌" } else { " " },
-            Style::default().fg(constants::ACCENT),
+            if self.focused { PROMPT_CURSOR } else { " " },
+            Style::default().fg(ACCENT),
         );
-        let border_style = Style::default().fg(if self.focused {
-            constants::ACCENT
-        } else {
-            constants::MUTED
-        });
+        let border_style = Style::default().fg(if self.focused { ACCENT } else { MUTED });
 
         Paragraph::new(self.label.as_str())
-            .fg(constants::MUTED)
+            .fg(MUTED)
             .render(chunks[0], buf);
 
         let shown = if self.mask {
@@ -133,10 +135,7 @@ impl Widget for &Prompt {
         let input = if self.value.is_empty() {
             Line::from(vec![
                 cursor,
-                Span::styled(
-                    format!(" {}", self.placeholder),
-                    Style::default().fg(constants::FAINT),
-                ),
+                Span::styled(format!(" {}", self.placeholder), Style::default().fg(FAINT)),
             ])
         } else {
             Line::from(vec![Span::raw(shown), cursor])
@@ -146,9 +145,9 @@ impl Widget for &Prompt {
             .block(
                 Block::bordered()
                     .border_style(border_style)
-                    .padding(Padding::horizontal(1)),
+                    .padding(Padding::horizontal(PROPMT_PADDING)),
             )
-            .fg(constants::FG)
+            .fg(FG)
             .render(chunks[1], buf);
     }
 }

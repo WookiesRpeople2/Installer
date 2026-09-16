@@ -7,7 +7,13 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, StatefulWidget, Widget},
 };
 
-use crate::components::{InputComponent, constants};
+use crate::components::{
+    InputComponent,
+    constants::{
+        ACCENT, BORDER, MUTED, SCROLL_DIR_SAT, SCROLL_H_SAT, SCROLL_ICON, SCROLL_SPACING,
+        SCROLL_W_SAT,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub struct ScrollList {
@@ -48,11 +54,11 @@ impl ScrollList {
             .max()
             .unwrap_or(0);
 
-        u16::try_from(longest.saturating_add(6)).unwrap_or(u16::MAX)
+        u16::try_from(longest.saturating_add(SCROLL_W_SAT)).unwrap_or(u16::MAX)
     }
 
     fn preferred_list_height(&self) -> u16 {
-        u16::try_from(self.items.len().saturating_add(2)).unwrap_or(u16::MAX)
+        u16::try_from(self.items.len().saturating_add(SCROLL_H_SAT)).unwrap_or(u16::MAX)
     }
 }
 
@@ -75,11 +81,11 @@ impl InputComponent for ScrollList {
                 false
             }
             KeyCode::PageUp => {
-                self.state.select(Some(i.saturating_sub(5)));
+                self.state.select(Some(i.saturating_sub(SCROLL_DIR_SAT)));
                 false
             }
             KeyCode::PageDown => {
-                self.state.select(Some((i + 5).min(len - 1)));
+                self.state.select(Some((i + SCROLL_DIR_SAT).min(len - 1)));
                 false
             }
             KeyCode::Enter => true,
@@ -102,11 +108,11 @@ impl Widget for &mut ScrollList {
             .areas(column);
 
         let [label_area, list_area] = Layout::vertical([Constraint::Length(1), Constraint::Min(0)])
-            .spacing(1)
+            .spacing(SCROLL_SPACING)
             .areas(content);
 
         Paragraph::new(self.label.as_str())
-            .fg(constants::MUTED)
+            .fg(MUTED)
             .centered()
             .render(label_area, buf);
 
@@ -117,7 +123,7 @@ impl Widget for &mut ScrollList {
             .map(|(i, item)| {
                 let line = if self.state.selected() == Some(i) {
                     Line::from(vec![
-                        Span::styled("› ", Style::default().fg(constants::ACCENT)),
+                        Span::styled(SCROLL_ICON, Style::default().fg(ACCENT)),
                         Span::raw(item),
                     ])
                 } else {
@@ -132,13 +138,9 @@ impl Widget for &mut ScrollList {
             .block(
                 Block::bordered()
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(constants::BORDER)),
+                    .border_style(Style::default().fg(BORDER)),
             )
-            .highlight_style(
-                Style::default()
-                    .fg(constants::ACCENT)
-                    .add_modifier(Modifier::BOLD),
-            );
+            .highlight_style(Style::default().fg(ACCENT).add_modifier(Modifier::BOLD));
 
         StatefulWidget::render(list, list_area, buf, &mut self.state);
     }

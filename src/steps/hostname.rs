@@ -5,7 +5,12 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{
+            HNAME_C_NAME, HNAME_F_C, HNAME_F_H, HNAME_T_FOOTER, HNAME_T_INTRO, PROMPT_CARD_FOOTER,
+        },
+    },
     utils::key::handle_on_key_menu_prompt,
 };
 
@@ -17,15 +22,17 @@ impl StepTrait for Hostname {
     }
 
     fn render(&self, app_state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Hostname").render(area, buf);
-        let areas = Vertical::new().field_height(4).split(inner, 1);
+        let inner = Card::new(HNAME_C_NAME)
+            .footer(PROMPT_CARD_FOOTER)
+            .render(area, buf);
+        let areas = Vertical::new()
+            .field_height(HNAME_F_H)
+            .split(inner, HNAME_F_C);
 
-        Text::new()
-            .content("Name this computer".into())
-            .render(areas.intro, buf);
+        Text::new().content(HNAME_T_INTRO).render(areas.intro, buf);
         app_state.state.hostname.render(areas.fields[0], buf);
         Text::new()
-            .content("Letters, numbers, hyphens only".into())
+            .content(HNAME_T_FOOTER)
             .render(areas.footer, buf);
     }
 }

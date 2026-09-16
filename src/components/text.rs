@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Paragraph, Widget},
 };
 
-use crate::components::constants;
+use crate::components::constants::FG;
 
 pub struct Text {
     content: String,
@@ -18,12 +18,12 @@ impl Text {
         Self {
             content: "".to_string(),
             alignment: Alignment::Center,
-            color: constants::FG,
+            color: FG,
         }
     }
 
-    pub fn content(mut self, content: String) -> Self {
-        self.content = content;
+    pub fn content(mut self, content: &str) -> Self {
+        self.content = content.into();
         self
     }
 

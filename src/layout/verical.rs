@@ -1,5 +1,7 @@
 use ratatui::layout::{Constraint, Layout, Rect};
 
+use crate::layout::constants::VERTICAL_DEFAULT_FIELD_HIGHT;
+
 pub struct Vertical {
     field_height: u16,
 }
@@ -13,7 +15,9 @@ pub struct VerticalAreas {
 
 impl Vertical {
     pub fn new() -> Self {
-        Self { field_height: 4 }
+        Self {
+            field_height: VERTICAL_DEFAULT_FIELD_HIGHT,
+        }
     }
 
     pub fn field_height(mut self, field_height: u16) -> Self {

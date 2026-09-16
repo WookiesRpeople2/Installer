@@ -5,7 +5,9 @@ use ratatui::{
     widgets::{Block, Borders, Gauge as RatatuiGauge, Widget},
 };
 
-use crate::components::constants;
+use crate::components::constants::{
+    ACCENT, BORDER, GAUGE_MAX_RATIO, GAUGE_MIN_RATIO, GAUGE_PERCENTAGE,
+};
 
 pub struct Gauge {
     ratio: f64,
@@ -15,7 +17,7 @@ pub struct Gauge {
 impl Gauge {
     pub fn new(ratio: f64, label: impl Into<String>) -> Self {
         Self {
-            ratio: ratio.clamp(0.0, 1.0),
+            ratio: ratio.clamp(GAUGE_MIN_RATIO, GAUGE_MAX_RATIO),
             label: label.into(),
         }
     }
@@ -27,11 +29,15 @@ impl Widget for &Gauge {
             .block(
                 Block::bordered()
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(constants::BORDER)),
+                    .border_style(Style::default().fg(BORDER)),
             )
-            .gauge_style(Style::default().fg(constants::ACCENT))
+            .gauge_style(Style::default().fg(ACCENT))
             .ratio(self.ratio)
-            .label(format!("{}  {:.0}%", self.label, self.ratio * 100.0))
+            .label(format!(
+                "{}  {:.0}%",
+                self.label,
+                self.ratio * GAUGE_PERCENTAGE
+            ))
             .render(area, buf);
     }
 }

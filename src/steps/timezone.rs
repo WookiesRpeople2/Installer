@@ -5,7 +5,10 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{SCROLL_LIST_CARD_FOOTER, TZ_C_NAME, TZ_F_C, TZ_F_H, TZ_T_FOOTER, TZ_T_INTRO},
+    },
     utils::key::handle_on_key_menu_scroll_list,
 };
 
@@ -17,17 +20,13 @@ impl StepTrait for Timezone {
     }
 
     fn render(&self, app_state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Timezone")
-            .footer("↑↓ scroll · Enter select")
+        let inner = Card::new(TZ_C_NAME)
+            .footer(SCROLL_LIST_CARD_FOOTER)
             .render(area, buf);
-        let areas = Vertical::new().field_height(10).split(inner, 1);
+        let areas = Vertical::new().field_height(TZ_F_H).split(inner, TZ_F_C);
 
-        Text::new()
-            .content("Select your timezone".into())
-            .render(areas.intro, buf);
+        Text::new().content(TZ_T_INTRO).render(areas.intro, buf);
         app_state.state.timezone.render(areas.fields[0], buf);
-        Text::new()
-            .content("PgUp/PgDn jump faster".into())
-            .render(areas.footer, buf);
+        Text::new().content(TZ_T_FOOTER).render(areas.footer, buf);
     }
 }

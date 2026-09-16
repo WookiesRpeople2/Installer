@@ -5,7 +5,12 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{
+            DISK_C_NAME, DISK_F_C, DISK_F_H, DISK_T_FOOTER, DISK_T_INTRO, SCROLL_LIST_CARD_FOOTER,
+        },
+    },
     utils::key::handle_on_key_menu,
 };
 use std::path::PathBuf;
@@ -23,17 +28,15 @@ impl StepTrait for Disk {
     }
 
     fn render(&self, app_state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Disk")
-            .footer("↑↓ scroll · Enter select")
+        let inner = Card::new(DISK_C_NAME)
+            .footer(SCROLL_LIST_CARD_FOOTER)
             .render(area, buf);
-        let areas = Vertical::new().field_height(12).split(inner, 2);
+        let areas = Vertical::new()
+            .field_height(DISK_F_H)
+            .split(inner, DISK_F_C);
 
-        Text::new()
-            .content("Select install target".into())
-            .render(areas.intro, buf);
+        Text::new().content(DISK_T_INTRO).render(areas.intro, buf);
         app_state.state.disks.render(areas.fields[0], buf);
-        Text::new()
-            .content("WARNING: All data on this disk will be destroyed".into())
-            .render(areas.footer, buf);
+        Text::new().content(DISK_T_FOOTER).render(areas.footer, buf);
     }
 }

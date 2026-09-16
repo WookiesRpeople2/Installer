@@ -5,7 +5,10 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{USER_C_NAME, USER_F_C, USER_F_H, USER_T_FOOTER, USER_T_INTRO},
+    },
     utils::key::handle_on_key_menu_prompt,
 };
 
@@ -17,17 +20,13 @@ impl StepTrait for Username {
     }
 
     fn render(&self, app_state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Installer").render(area, buf);
-        let areas = Vertical::new().field_height(4).split(inner, 1);
+        let inner = Card::new(USER_C_NAME).render(area, buf);
+        let areas = Vertical::new()
+            .field_height(USER_F_H)
+            .split(inner, USER_F_C);
 
-        Text::new()
-            .content("Please enter your username".into())
-            .render(areas.intro, buf);
-
+        Text::new().content(USER_T_INTRO).render(areas.intro, buf);
         app_state.state.username.render(areas.fields[0], buf);
-
-        Text::new()
-            .content("Enter next · Shift-Tab back".into())
-            .render(areas.footer, buf);
+        Text::new().content(USER_T_FOOTER).render(areas.footer, buf);
     }
 }

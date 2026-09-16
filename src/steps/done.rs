@@ -5,7 +5,12 @@ use super::{Transition, step_manager::AppState};
 use crate::{
     components::{card::Card, text::Text},
     layout::verical::Vertical,
-    steps::StepTrait,
+    steps::{
+        StepTrait,
+        constants::{
+            DONE_C_NAME, DONE_F_C, DONE_F_H, DONE_T_FOOTER, DONE_T_INTRO, PROMPT_CARD_FOOTER,
+        },
+    },
     utils::cmd::reboot,
 };
 
@@ -23,14 +28,14 @@ impl StepTrait for Done {
     }
 
     fn render(&self, _state: &mut AppState, area: Rect, buf: &mut Buffer) {
-        let inner = Card::new("Done").render(area, buf);
-        let areas = Vertical::new().field_height(4).split(inner, 0);
+        let inner = Card::new(DONE_C_NAME)
+            .footer(PROMPT_CARD_FOOTER)
+            .render(area, buf);
+        let areas = Vertical::new()
+            .field_height(DONE_F_H)
+            .split(inner, DONE_F_C);
 
-        Text::new()
-            .content("Install complete".into())
-            .render(areas.intro, buf);
-        Text::new()
-            .content("Press Enter to reboot".into())
-            .render(areas.footer, buf);
+        Text::new().content(DONE_T_INTRO).render(areas.intro, buf);
+        Text::new().content(DONE_T_FOOTER).render(areas.footer, buf);
     }
 }
