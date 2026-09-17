@@ -27,6 +27,16 @@ pub fn get_disks() -> Vec<String> {
     }
 }
 
+pub fn get_swap_disks(exclude_disk: &Path) -> Vec<String> {
+    get_disks()
+        .into_iter()
+        .filter(|line| {
+            let name = line.split_whitespace().next().unwrap_or("");
+            Path::new(name) != exclude_disk
+        })
+        .collect()
+}
+
 pub fn get_swap_candidates(exclude_disk: &Path) -> Vec<String> {
     let exclude = exclude_disk
         .file_name()

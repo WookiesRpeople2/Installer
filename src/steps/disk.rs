@@ -9,8 +9,9 @@ use crate::{
         StepTrait,
         constants::{
             DISK_C_NAME, DISK_F_C, DISK_F_H, DISK_T_FOOTER, DISK_T_INTRO, SCROLL_LIST_CARD_FOOTER,
-            SWAP_NONE, SWAP_ON_INSTALL,
+            SWAP_CREATE_OTHER, SWAP_NONE, SWAP_ON_INSTALL,
         },
+        swap::SwapPhase,
     },
     utils::{cmd::get_swap_candidates, key::handle_on_key_menu},
 };
@@ -25,12 +26,18 @@ impl StepTrait for Disk {
                 let dev = line.split_whitespace().next().unwrap_or(line);
                 app_state.state.disk = PathBuf::from(dev);
                 app_state.state.swaps.set_items({
-                    let mut items = vec![SWAP_ON_INSTALL.to_string(), SWAP_NONE.to_string()];
+                    let mut items = vec![
+                        SWAP_ON_INSTALL.to_string(),
+                        SWAP_CREATE_OTHER.to_string(),
+                        SWAP_NONE.to_string(),
+                    ];
                     items.extend(get_swap_candidates(&app_state.state.disk));
                     items
                 });
-                app_state.state.swap.clear();
-                app_state.state.swap_on_install = false;
+                app_state.swap_phase = SwapPhase::Mode;
+                app_state.state.swap_create_other = false;
+                app_state.state.swap_disk.clear();
+                app_state.state.swap_size_gb = 4;
             }
         })
     }

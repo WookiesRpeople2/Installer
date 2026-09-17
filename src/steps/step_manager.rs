@@ -10,10 +10,11 @@ use crate::steps::boot_manager::BootManger;
 use crate::steps::confirm::Confirm;
 use crate::steps::constants::{
     INSTALL_LABEL, INSTALL_RATIO, PASSWORD_MASK, SMGR_P_H_KEY, SMGR_P_H_MAX, SMGR_P_H_VALUE,
-    SMGR_P_RP_KEY, SMGR_P_RP_MAX, SMGR_P_RP_VALUE, SMGR_P_U_KEY, SMGR_P_U_MAX, SMGR_P_U_VALUE,
-    SMGR_P_UP_KEY, SMGR_P_UP_MAX, SMGR_P_UP_VALUE, SMGR_P_WP_KEY, SMGR_P_WP_MAX, SMGR_P_WP_VALUE,
-    SMGR_S_BOOT_KEY, SMGR_S_BOOT_OPTS, SMGR_S_DISK_KEY, SMGR_S_KM_KEY, SMGR_S_KM_OPTS,
-    SMGR_S_LOC_KEY, SMGR_S_LOC_OPTS, SMGR_S_SWAP_KEY, SMGR_S_TZ_KEY, SMGR_S_TZ_OPTS,
+    SMGR_P_RP_KEY, SMGR_P_RP_MAX, SMGR_P_RP_VALUE, SMGR_P_SWAP_SIZE_KEY, SMGR_P_SWAP_SIZE_MAX,
+    SMGR_P_SWAP_SIZE_VALUE, SMGR_P_U_KEY, SMGR_P_U_MAX, SMGR_P_U_VALUE, SMGR_P_UP_KEY,
+    SMGR_P_UP_MAX, SMGR_P_UP_VALUE, SMGR_P_WP_KEY, SMGR_P_WP_MAX, SMGR_P_WP_VALUE, SMGR_S_BOOT_KEY,
+    SMGR_S_BOOT_OPTS, SMGR_S_DISK_KEY, SMGR_S_KM_KEY, SMGR_S_KM_OPTS, SMGR_S_LOC_KEY,
+    SMGR_S_LOC_OPTS, SMGR_S_SWAP_DISK_KEY, SMGR_S_SWAP_KEY, SMGR_S_TZ_KEY, SMGR_S_TZ_OPTS,
     SMGR_S_WIFI_KEY, WIFI_SKIP,
 };
 use crate::steps::disk::Disk;
@@ -23,7 +24,7 @@ use crate::steps::installing::Installing;
 use crate::steps::keymap::Keymap;
 use crate::steps::locale::Locale;
 use crate::steps::password::Password;
-use crate::steps::swap::Swap;
+use crate::steps::swap::{Swap, SwapPhase};
 use crate::steps::timezone::Timezone;
 use crate::steps::username::Username;
 use crate::steps::welcome::Welcome;
@@ -56,10 +57,14 @@ pub struct State {
     pub disk: PathBuf,
     pub swap: PathBuf,
     pub wifi_ssid: String,
+    pub swap_disk: PathBuf,
     pub swap_on_install: bool,
+    pub swap_create_other: bool,
+    pub swap_size_gb: u64,
 
     pub username: Prompt,
     pub hostname: Prompt,
+    pub swap_size: Prompt,
     pub user_password: Prompt,
     pub root_password: Prompt,
     pub wifi_password: Prompt,
@@ -69,6 +74,7 @@ pub struct State {
     pub keymap: ScrollList,
     pub disks: ScrollList,
     pub swaps: ScrollList,
+    pub swap_disks: ScrollList,
     pub boot_managers: ScrollList,
     pub wifi_networks: ScrollList,
 }
@@ -81,6 +87,7 @@ pub struct AppState {
     pub install_rx: Option<Receiver<InstallEvent>>,
     pub wifi_phase: WifiPhase,
     pub wifi_error: Option<String>,
+    pub swap_phase: SwapPhase,
 
     step: StepId,
     exit: bool,
@@ -91,10 +98,16 @@ impl Default for AppState {
         let state = State {
             disk: PathBuf::new(),
             swap: PathBuf::new(),
+            swap_disk: PathBuf::new(),
             swap_on_install: false,
+            swap_create_other: false,
+            swap_size_gb: 4,
             wifi_ssid: String::new(),
             username: Prompt::new(SMGR_P_U_KEY, SMGR_P_U_VALUE).max_len(SMGR_P_U_MAX),
             hostname: Prompt::new(SMGR_P_H_KEY, SMGR_P_H_VALUE).max_len(SMGR_P_H_MAX),
+            swap_size: Prompt::new(SMGR_P_SWAP_SIZE_KEY, SMGR_P_SWAP_SIZE_VALUE)
+                .max_len(SMGR_P_SWAP_SIZE_MAX)
+                .filter(|c| c.is_ascii_digit()),
             user_password: Prompt::new(SMGR_P_UP_KEY, SMGR_P_UP_VALUE)
                 .mask(PASSWORD_MASK)
                 .max_len(SMGR_P_UP_MAX),
@@ -109,6 +122,7 @@ impl Default for AppState {
             keymap: ScrollList::new(SMGR_S_KM_KEY, SMGR_S_KM_OPTS.clone()),
             disks: ScrollList::new(SMGR_S_DISK_KEY, get_disks()),
             swaps: ScrollList::new(SMGR_S_SWAP_KEY, vec![]),
+            swap_disks: ScrollList::new(SMGR_S_SWAP_DISK_KEY, vec![]),
             boot_managers: ScrollList::new(SMGR_S_BOOT_KEY, SMGR_S_BOOT_OPTS.clone()),
             wifi_networks: ScrollList::new(SMGR_S_WIFI_KEY, {
                 let mut items = vec![WIFI_SKIP.to_string()];
@@ -128,6 +142,7 @@ impl Default for AppState {
             install_rx: None,
             wifi_phase: WifiPhase::Networks,
             wifi_error: None,
+            swap_phase: SwapPhase::Mode,
 
             step: StepId::Welcome,
             exit: false,
