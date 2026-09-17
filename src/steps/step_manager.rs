@@ -8,7 +8,14 @@ use crate::components::prompt::Prompt;
 use crate::components::scroll_list::ScrollList;
 use crate::steps::boot_manager::BootManger;
 use crate::steps::confirm::Confirm;
-use crate::steps::constants::WIFI_SKIP;
+use crate::steps::constants::{
+    INSTALL_LABEL, INSTALL_RATIO, PASSWORD_MASK, SMGR_P_H_KEY, SMGR_P_H_MAX, SMGR_P_H_VALUE,
+    SMGR_P_RP_KEY, SMGR_P_RP_MAX, SMGR_P_RP_VALUE, SMGR_P_U_KEY, SMGR_P_U_MAX, SMGR_P_U_VALUE,
+    SMGR_P_UP_KEY, SMGR_P_UP_MAX, SMGR_P_UP_VALUE, SMGR_P_WP_KEY, SMGR_P_WP_MAX, SMGR_P_WP_VALUE,
+    SMGR_S_BOOT_KEY, SMGR_S_BOOT_OPTS, SMGR_S_DISK_KEY, SMGR_S_KM_KEY, SMGR_S_KM_OPTS,
+    SMGR_S_LOC_KEY, SMGR_S_LOC_OPTS, SMGR_S_SWAP_KEY, SMGR_S_TZ_KEY, SMGR_S_TZ_OPTS,
+    SMGR_S_WIFI_KEY, WIFI_SKIP,
+};
 use crate::steps::disk::Disk;
 use crate::steps::done::Done;
 use crate::steps::hostname::Hostname;
@@ -86,67 +93,24 @@ impl Default for AppState {
             swap: PathBuf::new(),
             swap_on_install: false,
             wifi_ssid: String::new(),
-            username: Prompt::new("Username", "type your name…").max_len(64),
-            hostname: Prompt::new("Hostname", "modular").max_len(64),
-            user_password: Prompt::new("User Password", "Set the user password")
-                .mask(true)
-                .max_len(64),
-            root_password: Prompt::new("Root Password", "Set the root password")
-                .mask(true)
-                .max_len(64),
-            wifi_password: Prompt::new("Wi-Fi Password", "network password…")
-                .mask(true)
-                .max_len(128),
-            timezone: ScrollList::new(
-                "Timezone",
-                vec![
-                    "Europe/Paris".into(),
-                    "Europe/London".into(),
-                    "Europe/Berlin".into(),
-                    "America/New_York".into(),
-                    "America/Los_Angeles".into(),
-                    "Asia/Tokyo".into(),
-                    "UTC".into(),
-                ],
-            ),
-            locale: ScrollList::new(
-                "Locale",
-                vec![
-                    "en_US.UTF-8".into(),
-                    "en_GB.UTF-8".into(),
-                    "fr_FR.UTF-8".into(),
-                    "de_DE.UTF-8".into(),
-                    "es_ES.UTF-8".into(),
-                    "it_IT.UTF-8".into(),
-                    "pt_PT.UTF-8".into(),
-                    "nl_NL.UTF-8".into(),
-                    "pl_PL.UTF-8".into(),
-                    "sv_SE.UTF-8".into(),
-                    "ja_JP.UTF-8".into(),
-                    "zh_CN.UTF-8".into(),
-                ],
-            ),
-            keymap: ScrollList::new(
-                "Keyboard",
-                vec![
-                    "us".into(),
-                    "uk".into(),
-                    "fr".into(),
-                    "de".into(),
-                    "es".into(),
-                    "it".into(),
-                    "pt".into(),
-                    "nl".into(),
-                    "pl".into(),
-                    "sv".into(),
-                    "dvorak".into(),
-                    "colemak".into(),
-                ],
-            ),
-            disks: ScrollList::new("Disks", get_disks()),
-            swaps: ScrollList::new("Swaps", vec![]),
-            boot_managers: ScrollList::new("Boot Managers", vec!["efi".into(), "grub".into()]),
-            wifi_networks: ScrollList::new("WI-FI", {
+            username: Prompt::new(SMGR_P_U_KEY, SMGR_P_U_VALUE).max_len(SMGR_P_U_MAX),
+            hostname: Prompt::new(SMGR_P_H_KEY, SMGR_P_H_VALUE).max_len(SMGR_P_H_MAX),
+            user_password: Prompt::new(SMGR_P_UP_KEY, SMGR_P_UP_VALUE)
+                .mask(PASSWORD_MASK)
+                .max_len(SMGR_P_UP_MAX),
+            root_password: Prompt::new(SMGR_P_RP_KEY, SMGR_P_RP_VALUE)
+                .mask(PASSWORD_MASK)
+                .max_len(SMGR_P_RP_MAX),
+            wifi_password: Prompt::new(SMGR_P_WP_KEY, SMGR_P_WP_VALUE)
+                .mask(PASSWORD_MASK)
+                .max_len(SMGR_P_WP_MAX),
+            timezone: ScrollList::new(SMGR_S_TZ_KEY, SMGR_S_TZ_OPTS.clone()),
+            locale: ScrollList::new(SMGR_S_LOC_KEY, SMGR_S_LOC_OPTS.clone()),
+            keymap: ScrollList::new(SMGR_S_KM_KEY, SMGR_S_KM_OPTS.clone()),
+            disks: ScrollList::new(SMGR_S_DISK_KEY, get_disks()),
+            swaps: ScrollList::new(SMGR_S_SWAP_KEY, vec![]),
+            boot_managers: ScrollList::new(SMGR_S_BOOT_KEY, SMGR_S_BOOT_OPTS.clone()),
+            wifi_networks: ScrollList::new(SMGR_S_WIFI_KEY, {
                 let mut items = vec![WIFI_SKIP.to_string()];
                 if let Ok(dev) = wifi_device() {
                     let _ = wifi_scan(&dev);
@@ -158,8 +122,8 @@ impl Default for AppState {
 
         Self {
             state,
-            install_ratio: 0.0,
-            install_label: "Starting…".into(),
+            install_ratio: INSTALL_RATIO,
+            install_label: INSTALL_LABEL.into(),
             install_error: None,
             install_rx: None,
             wifi_phase: WifiPhase::Networks,
