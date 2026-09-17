@@ -94,8 +94,12 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     let disk_str = disk.to_string_lossy();
     let d = disk_str.as_ref();
 
+    let _ = run("swapoff", ["-a"]);
+
     run("wipefs", ["-a", d])?;
     run("sgdisk", ["--zap-all", d])?;
+    run("partprobe", [d])?;
+    run("udevadm", ["settle"])?;
 
     let specs: &[(u8, &str, &str)] = if with_swap {
         &[(1, "+512M", "EF00"), (2, "+4G", "8200"), (3, "0", "8300")]
@@ -110,6 +114,7 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     }
 
     run("partprobe", [d])?;
+    run("udevadm", ["settle"])?;
 
     let parts = Partitions {
         efi: part_name(disk, 1),
@@ -122,6 +127,7 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
         .chain(std::iter::once(&parts.root))
     {
         wait_for_part(p)?;
+        run("wipefs", ["-a", p.to_str().unwrap()])?;
     }
 
     Ok(parts)
