@@ -68,6 +68,8 @@ pub const SWAP_F_H: u16 = 12;
 pub const SWAP_F_C: usize = 1;
 pub const SWAP_T_INTRO: &str = "Select install target";
 pub const SWAP_T_FOOTER: &str = "Select None if you do not want to use the swap partition";
+pub const SWAP_ON_INSTALL: &str = "Create on main disk";
+pub const SWAP_NONE: &str = "None";
 
 pub const TZ_C_NAME: &str = "Timezone";
 pub const TZ_F_H: u16 = 10;

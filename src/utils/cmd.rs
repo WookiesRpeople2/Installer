@@ -27,6 +27,79 @@ pub fn get_disks() -> Vec<String> {
     }
 }
 
+pub fn get_swap_candidates(exclude_disk: &Path) -> Vec<String> {
+    let exclude = exclude_disk
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+
+    let mut live_names: Vec<String> = Vec::new();
+    for mount in ["/", "/run/archiso/bootmnt", "/run/archiso/copytoram"] {
+        if let Ok(out) = run("findmnt", &["-n", "-o", "SOURCE", mount]) {
+            // SOURCE may be /dev/sda1 or /dev/mapper/...
+            if let Some(name) = out.trim().strip_prefix("/dev/") {
+                let base = name.trim_end_matches(|c: char| c.is_ascii_digit());
+                let base = base.strip_suffix('p').unwrap_or(base);
+                live_names.push(name.to_string());
+                live_names.push(base.to_string());
+            }
+        }
+    }
+
+    let Ok(out) = run(
+        "lsblk",
+        &[
+            "-dn",
+            "-b",
+            "-o",
+            "NAME,SIZE,TYPE,RO,MOUNTPOINT,FSTYPE,PKNAME,MODEL",
+        ],
+    ) else {
+        return Vec::new();
+    };
+
+    out.lines()
+        .filter_map(|line| {
+            let mut p = line.split_whitespace();
+            let name = p.next()?;
+            let size_b: u64 = p.next()?.parse().ok()?;
+            let typ = p.next()?;
+            let ro = p.next()?;
+            let mount = p.next().unwrap_or("-");
+            let _fstype = p.next().unwrap_or("-");
+            let pkname = p.next().unwrap_or("-");
+            let model = p.collect::<Vec<_>>().join(" ");
+
+            let is_mounted = mount != "-" && !mount.is_empty();
+            let on_install_disk = pkname == exclude || name.starts_with(exclude);
+            let is_live_media = live_names
+                .iter()
+                .any(|d| name == d || pkname == d || name.starts_with(d.as_str()));
+            let is_tiny = size_b < 256 * 1024 * 1024;
+
+            if typ != "part"
+                || ro != "0"
+                || is_mounted
+                || on_install_disk
+                || is_live_media
+                || is_tiny
+            {
+                return None;
+            }
+
+            let size = if size_b >= 1024 * 1024 * 1024 {
+                format!("{:.1}G", size_b as f64 / (1024.0 * 1024.0 * 1024.0))
+            } else if size_b >= 1024 * 1024 {
+                format!("{:.0}M", size_b as f64 / (1024.0 * 1024.0))
+            } else {
+                format!("{:.0}K", size_b as f64 / 1024.0)
+            };
+
+            Some(format!("/dev/{name}  {size}  {model}"))
+        })
+        .collect()
+}
+
 pub fn run<I, S>(program: &str, args: I) -> Result<String, String>
 where
     I: IntoIterator<Item = S>,

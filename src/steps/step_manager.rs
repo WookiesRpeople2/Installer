@@ -49,6 +49,7 @@ pub struct State {
     pub disk: PathBuf,
     pub swap: PathBuf,
     pub wifi_ssid: String,
+    pub swap_on_install: bool,
 
     pub username: Prompt,
     pub hostname: Prompt,
@@ -83,6 +84,7 @@ impl Default for AppState {
         let state = State {
             disk: PathBuf::new(),
             swap: PathBuf::new(),
+            swap_on_install: false,
             wifi_ssid: String::new(),
             username: Prompt::new("Username", "type your name…").max_len(64),
             hostname: Prompt::new("Hostname", "modular").max_len(64),
@@ -142,13 +144,7 @@ impl Default for AppState {
                 ],
             ),
             disks: ScrollList::new("Disks", get_disks()),
-            swaps: ScrollList::new(
-                "Swaps",
-                get_disks()
-                    .into_iter()
-                    .chain(std::iter::once("None".to_string()))
-                    .collect::<Vec<_>>(),
-            ),
+            swaps: ScrollList::new("Swaps", vec![]),
             boot_managers: ScrollList::new("Boot Managers", vec!["efi".into(), "grub".into()]),
             wifi_networks: ScrollList::new("WI-FI", {
                 let mut items = vec![WIFI_SKIP.to_string()];

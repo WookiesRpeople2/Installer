@@ -8,7 +8,8 @@ use crate::{
     steps::{
         StepTrait,
         constants::{
-            SCROLL_LIST_CARD_FOOTER, SWAP_C_NAME, SWAP_F_C, SWAP_F_H, SWAP_T_FOOTER, SWAP_T_INTRO,
+            SCROLL_LIST_CARD_FOOTER, SWAP_C_NAME, SWAP_F_C, SWAP_F_H, SWAP_NONE, SWAP_ON_INSTALL,
+            SWAP_T_FOOTER, SWAP_T_INTRO,
         },
     },
     utils::key::handle_on_key_menu,
@@ -20,12 +21,22 @@ pub struct Swap;
 impl StepTrait for Swap {
     fn on_key(&self, app_state: &mut AppState, key: KeyEvent) -> Transition {
         handle_on_key_menu(&mut app_state.state.swaps, key, |swaps| {
-            if let Some(line) = swaps.selected()
-                && swaps.selected() != "None".into()
-            {
-                let dev = line.split_whitespace().next().unwrap_or(line);
-                app_state.state.swap = PathBuf::from(dev);
+            match swaps.selected() {
+                Some(SWAP_ON_INSTALL) => {
+                    app_state.state.swap_on_install = true;
+                    app_state.state.swap.clear();
+                }
+                Some(SWAP_NONE) | None => {
+                    app_state.state.swap_on_install = false;
+                    app_state.state.swap.clear();
+                }
+                Some(line) => {
+                    app_state.state.swap_on_install = false;
+                    let dev = line.split_whitespace().next().unwrap_or(line);
+                    app_state.state.swap = PathBuf::from(dev);
+                }
             }
+            Transition::Next
         })
     }
 

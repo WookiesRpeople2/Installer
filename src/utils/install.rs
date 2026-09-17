@@ -12,6 +12,7 @@ pub enum InstallEvent {
 struct Partitions {
     efi: PathBuf,
     root: PathBuf,
+    swap: Option<PathBuf>,
 }
 
 pub fn install(state: &State, mut on_progress: impl FnMut(f64, &str)) -> CmdResult {
@@ -19,15 +20,22 @@ pub fn install(state: &State, mut on_progress: impl FnMut(f64, &str)) -> CmdResu
     let boot_manager = state.boot_managers.selected();
 
     on_progress(0.05, "Partitioning");
-    let parts = partition(disk)?;
+    let parts = partition(disk, state.swap_on_install)?;
 
     on_progress(0.15, "Formatting");
     format_partitions(&parts)?;
 
     on_progress(0.25, "Mounting");
     mount_boot(&parts)?;
-    if state.swap.as_os_str().len() > 0 {
-        setup_swap(state.swap.as_path())?;
+    let swap_dev = if state.swap_on_install {
+        parts.swap.as_deref()
+    } else if state.swap.as_os_str().len() > 0 {
+        Some(state.swap.as_path())
+    } else {
+        None
+    };
+    if let Some(swap) = swap_dev {
+        setup_swap(swap)?;
     }
     gen_fstab()?;
 
@@ -85,17 +93,28 @@ fn format_partitions(parts: &Partitions) -> CmdResult {
     Ok(String::new())
 }
 
-fn partition(disk: &Path) -> Result<Partitions, String> {
+fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     let d = disk.to_string_lossy();
-
     run("sgdisk", ["--zap-all", d.as_ref()])?;
     run("sgdisk", ["-n", "1:0:+512M", "-t", "1:EF00", d.as_ref()])?;
-    run("sgdisk", ["-n", "2:0:0", "-t", "2:8300", d.as_ref()])?;
-    run("partprobe", [d.as_ref()])?;
-    Ok(Partitions {
-        efi: part_name(disk, 1),
-        root: part_name(disk, 2),
-    })
+    if with_swap {
+        run("sgdisk", ["-n", "2:0:+4G", "-t", "2:8200", d.as_ref()])?;
+        run("sgdisk", ["-n", "3:0:0", "-t", "3:8300", d.as_ref()])?;
+        run("partprobe", [d.as_ref()])?;
+        Ok(Partitions {
+            efi: part_name(disk, 1),
+            swap: Some(part_name(disk, 2)),
+            root: part_name(disk, 3),
+        })
+    } else {
+        run("sgdisk", ["-n", "2:0:0", "-t", "2:8300", d.as_ref()])?;
+        run("partprobe", [d.as_ref()])?;
+        Ok(Partitions {
+            efi: part_name(disk, 1),
+            swap: None,
+            root: part_name(disk, 2),
+        })
+    }
 }
 
 fn mount_boot(parts: &Partitions) -> CmdResult {

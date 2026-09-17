@@ -72,7 +72,16 @@ impl StepTrait for Confirm {
                     .to_string(),
             ),
             (CONF_T_DISK, app_state.state.disk.display().to_string()),
-            (CONF_T_SWAP, app_state.state.swap.display().to_string()),
+            (
+                CONF_T_SWAP,
+                if app_state.state.swap_on_install {
+                    format!("{} (new partition)", app_state.state.disk.display())
+                } else if app_state.state.swap.as_os_str().is_empty() {
+                    "None".into()
+                } else {
+                    app_state.state.swap.display().to_string()
+                },
+            ),
             (
                 CONF_T_TZ,
                 app_state
