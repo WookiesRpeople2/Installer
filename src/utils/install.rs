@@ -86,6 +86,7 @@ fn hostname(hostname: &str) -> Result<(), String> {
 fn format_partitions(parts: &Partitions) -> CmdResult {
     run("mkfs.fat", ["-F32", parts.efi.to_str().unwrap()])?;
     run("mkfs.ext4", ["-F", parts.root.to_str().unwrap()])?;
+    run("udevadm", ["settle"])?;
     Ok(String::new())
 }
 
@@ -93,6 +94,7 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     let disk_str = disk.to_string_lossy();
     let d = disk_str.as_ref();
 
+    run("wipefs", ["-a", d])?;
     run("sgdisk", ["--zap-all", d])?;
 
     let specs: &[(u8, &str, &str)] = if with_swap {
@@ -126,9 +128,15 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
 }
 
 fn mount_boot(parts: &Partitions) -> CmdResult {
-    run("mount", [parts.root.to_str().unwrap(), "/mnt"])?;
+    run(
+        "mount",
+        ["-t", "ext4", parts.root.to_str().unwrap(), "/mnt"],
+    )?;
     create_dir_all("/mnt/boot").map_err(|e| e.to_string())?;
-    run("mount", [parts.efi.to_str().unwrap(), "/mnt/boot"])?;
+    run(
+        "mount",
+        ["-t", "vfat", parts.efi.to_str().unwrap(), "/mnt/boot"],
+    )?;
     Ok(String::new())
 }
 
