@@ -37,10 +37,10 @@ pub fn install(state: &State, mut on_progress: impl FnMut(f64, &str)) -> CmdResu
     if let Some(swap) = swap_dev {
         setup_swap(swap)?;
     }
-    gen_fstab()?;
 
     on_progress(0.40, "Installing packages");
     pacstrap(boot_manager == "grub".into())?;
+    gen_fstab()?;
 
     on_progress(0.70, "Configuring system");
     hostname(state.hostname.value())?;
@@ -52,11 +52,7 @@ pub fn install(state: &State, mut on_progress: impl FnMut(f64, &str)) -> CmdResu
     sudoers()?;
 
     on_progress(0.90, "Bootloader");
-    bootloader(
-        state.boot_managers.selected().unwrap_or("efi"),
-        disk,
-        &parts,
-    )?;
+    bootloader(state.boot_managers.selected().unwrap_or("efi"), &parts)?;
     enable_services()?;
 
     on_progress(1.0, "Done");
@@ -74,8 +70,8 @@ fn sudoers() -> Result<(), String> {
 }
 
 fn user(user: &str, user_password: &str) -> CmdResult {
-    let _ = chroot(&["useradd", "-m", "-G", "wheel", "-s", "/bin/bash", user]);
-    chroot_with_stdin(&["chpasswd"], &format!("{}:{}", user, user_password))
+    let _ = chroot(&["useradd", "-m", "-G", "wheel", "-s", "/bin/bash", user])?;
+    chroot_with_stdin(&["chpasswd"], &format!("{}:{}\n", user, user_password))
 }
 
 fn root(root_password: &str) -> CmdResult {
@@ -94,27 +90,39 @@ fn format_partitions(parts: &Partitions) -> CmdResult {
 }
 
 fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
-    let d = disk.to_string_lossy();
-    run("sgdisk", ["--zap-all", d.as_ref()])?;
-    run("sgdisk", ["-n", "1:0:+512M", "-t", "1:EF00", d.as_ref()])?;
-    if with_swap {
-        run("sgdisk", ["-n", "2:0:+4G", "-t", "2:8200", d.as_ref()])?;
-        run("sgdisk", ["-n", "3:0:0", "-t", "3:8300", d.as_ref()])?;
-        run("partprobe", [d.as_ref()])?;
-        Ok(Partitions {
-            efi: part_name(disk, 1),
-            swap: Some(part_name(disk, 2)),
-            root: part_name(disk, 3),
-        })
+    let disk_str = disk.to_string_lossy();
+    let d = disk_str.as_ref();
+
+    run("sgdisk", ["--zap-all", d])?;
+
+    let specs: &[(u8, &str, &str)] = if with_swap {
+        &[(1, "+512M", "EF00"), (2, "+4G", "8200"), (3, "0", "8300")]
     } else {
-        run("sgdisk", ["-n", "2:0:0", "-t", "2:8300", d.as_ref()])?;
-        run("partprobe", [d.as_ref()])?;
-        Ok(Partitions {
-            efi: part_name(disk, 1),
-            swap: None,
-            root: part_name(disk, 2),
-        })
+        &[(1, "+512M", "EF00"), (2, "0", "8300")]
+    };
+
+    for (num, size, gpt_type) in specs {
+        let n = format!("-n{num}:0:{size}");
+        let t = format!("-t{num}:{gpt_type}");
+        run("sgdisk", [n.as_str(), t.as_str(), d])?;
     }
+
+    run("partprobe", [d])?;
+
+    let parts = Partitions {
+        efi: part_name(disk, 1),
+        swap: with_swap.then(|| part_name(disk, 2)),
+        root: part_name(disk, specs.last().unwrap().0.into()),
+    };
+
+    for p in std::iter::once(&parts.efi)
+        .chain(parts.swap.iter())
+        .chain(std::iter::once(&parts.root))
+    {
+        wait_for_part(p)?;
+    }
+
+    Ok(parts)
 }
 
 fn mount_boot(parts: &Partitions) -> CmdResult {
@@ -131,20 +139,20 @@ fn setup_swap(swap: &Path) -> CmdResult {
 }
 
 fn pacstrap(grub: bool) -> CmdResult {
-    run(
-        "pacstrap",
-        [
-            "-K",
-            "/mnt",
-            "base",
-            "linux",
-            "linux-firmware",
-            "sudo",
-            "efibootmgr",
-            if grub { "grub" } else { "" },
-            "modular-meta",
-        ],
-    )
+    let mut args = vec![
+        "-K",
+        "/mnt",
+        "base",
+        "linux",
+        "linux-firmware",
+        "sudo",
+        "efibootmgr",
+        "modular-meta",
+    ];
+    if grub {
+        args.push("grub");
+    }
+    run("pacstrap", args)
 }
 
 fn timezone(tz: &str) -> CmdResult {
@@ -167,7 +175,7 @@ fn keymap(keymap: &str) -> Result<(), String> {
     write("/mnt/etc/vconsole.conf", format!("KEYMAP={keymap}\n")).map_err(|e| e.to_string())
 }
 
-fn bootloader(kind: &str, disk: &Path, parts: &Partitions) -> CmdResult {
+fn bootloader(kind: &str, parts: &Partitions) -> CmdResult {
     match kind {
         "grub" => {
             chroot([
@@ -180,7 +188,32 @@ fn bootloader(kind: &str, disk: &Path, parts: &Partitions) -> CmdResult {
         }
         _ => {
             chroot(["bootctl", "install"])?;
-            let _ = (disk, parts);
+            let partuuid = run(
+                "blkid",
+                [
+                    "-s",
+                    "PARTUUID",
+                    "-o",
+                    "value",
+                    parts.root.to_str().unwrap(),
+                ],
+            )?;
+            write(
+                "/mnt/boot/loader/loader.conf",
+                "default modular.conf\ntimeout 3\nconsole-mode max\neditor no\n",
+            )
+            .map_err(|e| e.to_string())?;
+            create_dir_all("/mnt/boot/loader/entries").map_err(|e| e.to_string())?;
+            write(
+                "/mnt/boot/loader/entries/modular.conf",
+                format!(
+                    "title   Modular Linux\n\
+                     linux   /vmlinuz-linux\n\
+                     initrd  /initramfs-linux.img\n\
+                     options root=PARTUUID={partuuid} rw\n"
+                ),
+            )
+            .map_err(|e| e.to_string())?;
             Ok(String::new())
         }
     }
@@ -191,6 +224,12 @@ fn enable_services() -> CmdResult {
     chroot(["systemctl", "enable", "sddm"])?;
     Ok(String::new())
 }
+
 fn unmount() -> CmdResult {
+    let _ = run("swapoff", ["-a"]);
     run("umount", ["-R", "/mnt"])
+}
+
+fn wait_for_part(part: &Path) -> CmdResult {
+    run("udevadm", ["wait", "--timeout=30", part.to_str().unwrap()])
 }
