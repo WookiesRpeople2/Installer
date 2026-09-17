@@ -1,6 +1,9 @@
+use std::sync::LazyLock;
+
 pub const PROMPT_CARD_FOOTER: &str = "Enter confirm · Esc quit";
 pub const SCROLL_LIST_CARD_FOOTER: &str = "↑↓ scroll · Enter select";
 pub const GAUGE_CARD_FOOTER: &str = "Please wait…";
+pub const PASSWORD_MASK: bool = true;
 
 pub const BMGR_C_NAME: &str = "Boot Manager";
 pub const BMGR_F_H: u16 = 10;
@@ -98,3 +101,75 @@ pub const WIFI_T_INTRO_NET: &str = "Select a Wi-Fi network";
 pub const WIFI_T_FOOTER_NET: &str = "Skip if you are on Ethernet";
 pub const WIFI_T_INTRO_PASS: &str = "Enter password for";
 pub const WIFI_T_FOOTER_PASS: &str = "Enter connect · Shift-Tab back to list";
+
+pub const SMGR_P_U_KEY: &str = "Username";
+pub const SMGR_P_U_VALUE: &str = "type your name…";
+pub const SMGR_P_U_MAX: usize = 64;
+pub const SMGR_P_H_KEY: &str = "Hostname";
+pub const SMGR_P_H_VALUE: &str = "modular";
+pub const SMGR_P_H_MAX: usize = 64;
+pub const SMGR_P_UP_KEY: &str = "User Password";
+pub const SMGR_P_UP_VALUE: &str = "Set the user password";
+pub const SMGR_P_UP_MAX: usize = 64;
+pub const SMGR_P_RP_KEY: &str = "Root Password";
+pub const SMGR_P_RP_VALUE: &str = "Set the root password";
+pub const SMGR_P_RP_MAX: usize = 64;
+pub const SMGR_P_WP_KEY: &str = "Wi-Fi Password";
+pub const SMGR_P_WP_VALUE: &str = "network password…";
+pub const SMGR_P_WP_MAX: usize = 128;
+
+pub const SMGR_S_TZ_KEY: &str = "Timezone";
+pub const SMGR_S_LOC_KEY: &str = "Locale";
+pub const SMGR_S_KM_KEY: &str = "Keyboard";
+pub const SMGR_S_DISK_KEY: &str = "Disks";
+pub const SMGR_S_SWAP_KEY: &str = "Swaps";
+pub const SMGR_S_BOOT_KEY: &str = "Boot Managers";
+pub const SMGR_S_WIFI_KEY: &str = "WI-FI";
+pub static SMGR_S_TZ_OPTS: LazyLock<Vec<String>> = LazyLock::new(|| {
+    vec![
+        "Europe/Paris".into(),
+        "Europe/London".into(),
+        "Europe/Berlin".into(),
+        "America/New_York".into(),
+        "America/Los_Angeles".into(),
+        "Asia/Tokyo".into(),
+        "UTC".into(),
+    ]
+});
+pub static SMGR_S_LOC_OPTS: LazyLock<Vec<String>> = LazyLock::new(|| {
+    vec![
+        "en_US.UTF-8".into(),
+        "en_GB.UTF-8".into(),
+        "fr_FR.UTF-8".into(),
+        "de_DE.UTF-8".into(),
+        "es_ES.UTF-8".into(),
+        "it_IT.UTF-8".into(),
+        "pt_PT.UTF-8".into(),
+        "nl_NL.UTF-8".into(),
+        "pl_PL.UTF-8".into(),
+        "sv_SE.UTF-8".into(),
+        "ja_JP.UTF-8".into(),
+        "zh_CN.UTF-8".into(),
+    ]
+});
+pub static SMGR_S_KM_OPTS: LazyLock<Vec<String>> = LazyLock::new(|| {
+    vec![
+        "us".into(),
+        "uk".into(),
+        "fr".into(),
+        "de".into(),
+        "es".into(),
+        "it".into(),
+        "pt".into(),
+        "nl".into(),
+        "pl".into(),
+        "sv".into(),
+        "dvorak".into(),
+        "colemak".into(),
+    ]
+});
+pub static SMGR_S_BOOT_OPTS: LazyLock<Vec<String>> =
+    LazyLock::new(|| vec!["efi".into(), "grub".into()]);
+
+pub const INSTALL_RATIO: f64 = 0.0;
+pub const INSTALL_LABEL: &str = "Starting…";
