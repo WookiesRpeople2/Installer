@@ -20,19 +20,23 @@ pub fn install(state: &State, mut on_progress: impl FnMut(f64, &str)) -> CmdResu
     let boot_manager = state.boot_managers.selected();
 
     on_progress(0.05, "Partitioning");
-    let parts = partition(disk, state.swap_on_install)?;
+    let parts = partition(disk, state)?;
 
     on_progress(0.15, "Formatting");
     format_partitions(&parts)?;
 
     on_progress(0.25, "Mounting");
     mount_boot(&parts)?;
-    let swap_dev = if state.swap_on_install {
+    let swap_other = state
+        .swap_create_other
+        .then(|| partition_swap_disk(&state.swap_disk, state.swap_size_gb))
+        .transpose()?;
+    let swap_dev: Option<&Path> = if state.swap_on_install {
         parts.swap.as_deref()
-    } else if state.swap.as_os_str().len() > 0 {
-        Some(state.swap.as_path())
     } else {
-        None
+        swap_other
+            .as_deref()
+            .or_else(|| (!state.swap.as_os_str().is_empty()).then(|| state.swap.as_path()))
     };
     if let Some(swap) = swap_dev {
         setup_swap(swap)?;
@@ -90,9 +94,10 @@ fn format_partitions(parts: &Partitions) -> CmdResult {
     Ok(String::new())
 }
 
-fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
+fn partition(disk: &Path, state: &State) -> Result<Partitions, String> {
     let disk_str = disk.to_string_lossy();
     let d = disk_str.as_ref();
+    let with_swap = state.swap_on_install;
 
     let _ = run("swapoff", ["-a"]);
 
@@ -100,18 +105,18 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     run("sgdisk", ["--zap-all", d])?;
     run("partprobe", [d])?;
     run("udevadm", ["settle"])?;
+    run("sgdisk", ["-n1:0:+512M", "-t1:EF00", d])?;
 
-    let specs: &[(u8, &str, &str)] = if with_swap {
-        &[(1, "+512M", "EF00"), (2, "+4G", "8200"), (3, "0", "8300")]
+    let root_num: u32 = if with_swap {
+        let swap_size = format!("+{}G", state.swap_size_gb);
+        let n = format!("-n2:0:{swap_size}");
+        run("sgdisk", [n.as_str(), "-t2:8200", d])?;
+        run("sgdisk", ["-n3:0:0", "-t3:8300", d])?;
+        3
     } else {
-        &[(1, "+512M", "EF00"), (2, "0", "8300")]
+        run("sgdisk", ["-n2:0:0", "-t2:8300", d])?;
+        2
     };
-
-    for (num, size, gpt_type) in specs {
-        let n = format!("-n{num}:0:{size}");
-        let t = format!("-t{num}:{gpt_type}");
-        run("sgdisk", [n.as_str(), t.as_str(), d])?;
-    }
 
     run("partprobe", [d])?;
     run("udevadm", ["settle"])?;
@@ -119,7 +124,7 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     let parts = Partitions {
         efi: part_name(disk, 1),
         swap: with_swap.then(|| part_name(disk, 2)),
-        root: part_name(disk, specs.last().unwrap().0.into()),
+        root: part_name(disk, root_num),
     };
 
     for p in std::iter::once(&parts.efi)
@@ -131,6 +136,29 @@ fn partition(disk: &Path, with_swap: bool) -> Result<Partitions, String> {
     }
 
     Ok(parts)
+}
+
+fn partition_swap_disk(disk: &Path, size_gb: u64) -> Result<PathBuf, String> {
+    let disk_str = disk.to_string_lossy();
+    let d = disk_str.as_ref();
+
+    let _ = run("swapoff", ["-a"]);
+    run("wipefs", ["-a", d])?;
+    run("sgdisk", ["--zap-all", d])?;
+    run("partprobe", [d])?;
+    run("udevadm", ["settle"])?;
+
+    let size = format!("+{}G", size_gb);
+    let n = format!("-n1:0:{size}");
+    run("sgdisk", [n.as_str(), "-t1:8200", d])?;
+
+    run("partprobe", [d])?;
+    run("udevadm", ["settle"])?;
+
+    let part = part_name(disk, 1);
+    wait_for_part(&part)?;
+    run("wipefs", ["-a", part.to_str().unwrap()])?;
+    Ok(part)
 }
 
 fn mount_boot(parts: &Partitions) -> CmdResult {
