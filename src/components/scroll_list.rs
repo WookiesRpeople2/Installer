@@ -35,6 +35,12 @@ impl ScrollList {
         }
     }
 
+    pub fn set_items(&mut self, items: Vec<String>) {
+        self.items = items;
+        self.state
+            .select(if self.items.is_empty() { None } else { Some(0) });
+    }
+
     pub fn selected(&self) -> Option<&str> {
         self.state
             .selected()
