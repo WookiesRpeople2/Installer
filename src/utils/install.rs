@@ -43,7 +43,6 @@ pub fn install(state: &State, mut on_progress: impl FnMut(f64, &str)) -> CmdResu
     }
 
     on_progress(0.40, "Installing packages");
-    init_keyring()?;
     pacstrap(boot_manager == "grub".into())?;
     gen_fstab()?;
 
@@ -178,12 +177,6 @@ fn mount_boot(parts: &Partitions) -> CmdResult {
 fn setup_swap(swap: &Path) -> CmdResult {
     run("mkswap", [swap.to_str().unwrap()])?;
     run("swapon", [swap.to_str().unwrap()])?;
-    Ok(String::new())
-}
-
-fn init_keyring() -> CmdResult {
-    run("pacman-key", ["--init"])?;
-    run("pacman-key", ["--populate"])?;
     Ok(String::new())
 }
 
